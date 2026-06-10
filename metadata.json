@@ -1,0 +1,6 @@
+{
+  "name": "Planning Poker",
+  "description": "Una herramienta moderna de Planning Poker para estimaciones ágiles en tiempo real, sincronizada mediante Firebase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
