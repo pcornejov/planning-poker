@@ -337,6 +337,10 @@ class DbService {
   }
 
   public async createTask(title: string, description: string = '') {
+    await this.startNewActiveTask(title, description);
+  }
+
+  public async startNewActiveTask(title: string, description: string = '') {
     const taskId = 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
     const newTask: Task = {
       id: taskId,
@@ -348,23 +352,67 @@ class DbService {
     if (isFirebaseConfigured && db) {
       const fns = await getFirebaseDBFunctions();
       if (!fns) return;
-      const { ref: fRef, set, get } = fns;
+      const { ref: fRef, update, get } = fns;
 
-      await set(fRef(db, `tasks/${taskId}`), newTask);
-      // Auto select newly created task as active if there is none
-      const activeRef = fRef(db, `system/activeTaskId`);
-      const activeSnap = await get(activeRef);
-      if (!activeSnap.exists() || !activeSnap.val()) {
-        await set(activeRef, taskId);
+      const updateMap: Record<string, any> = {};
+      updateMap[`tasks/${taskId}`] = newTask;
+      updateMap[`system/activeTaskId`] = taskId;
+      updateMap[`system/reveal`] = false;
+
+      // Reset all participants' votes
+      const participantsRef = fRef(db, 'participants');
+      const snap = await get(participantsRef);
+      if (snap.exists()) {
+        const users = snap.val();
+        Object.keys(users).forEach(uId => {
+          updateMap[`participants/${uId}/vote`] = null;
+        });
       }
+
+      await update(fRef(db, '/'), updateMap);
     } else {
       this.loadLocalState();
       if (!this.localState.tasks) this.localState.tasks = {};
       this.localState.tasks[taskId] = newTask;
-      
-      if (!this.localState.system.activeTaskId) {
-        this.localState.system.activeTaskId = taskId;
+      this.localState.system.activeTaskId = taskId;
+      this.localState.system.reveal = false;
+
+      Object.keys(this.localState.participants || {}).forEach(uId => {
+        this.localState.participants[uId].vote = null;
+      });
+      this.broadcastState();
+    }
+  }
+
+  public async clearActiveTask() {
+    if (isFirebaseConfigured && db) {
+      const fns = await getFirebaseDBFunctions();
+      if (!fns) return;
+      const { ref: fRef, update, get } = fns;
+
+      const updateMap: Record<string, any> = {};
+      updateMap[`system/activeTaskId`] = null;
+      updateMap[`system/reveal`] = false;
+
+      // Reset all participants' votes
+      const participantsRef = fRef(db, 'participants');
+      const snap = await get(participantsRef);
+      if (snap.exists()) {
+        const users = snap.val();
+        Object.keys(users).forEach(uId => {
+          updateMap[`participants/${uId}/vote`] = null;
+        });
       }
+
+      await update(fRef(db, '/'), updateMap);
+    } else {
+      this.loadLocalState();
+      this.localState.system.activeTaskId = null;
+      this.localState.system.reveal = false;
+
+      Object.keys(this.localState.participants || {}).forEach(uId => {
+        this.localState.participants[uId].vote = null;
+      });
       this.broadcastState();
     }
   }

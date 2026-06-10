@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  LogOut, ClipboardList, BarChart2, Users, Layers,
+  LogOut, BarChart2, Users, Layers,
   Sparkles, Check, Info, InfoIcon, ShieldAlert 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -14,7 +14,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import ModalSetup from './components/ModalSetup';
 import ThemeToggle from './components/ThemeToggle';
 import PanelParticipants from './components/PanelParticipants';
-import PanelTasks from './components/PanelTasks';
 import PanelPoker from './components/PanelPoker';
 import PanelResults from './components/PanelResults';
 
@@ -32,8 +31,8 @@ export default function App() {
     tasks: {},
   });
 
-  // Mobile navigation tabs 'vote' | 'tasks' | 'participants' | 'results'
-  const [activeMobileTab, setActiveMobileTab] = useState<'vote' | 'tasks' | 'results'>('vote');
+  // Mobile navigation tabs 'vote' | 'results'
+  const [activeMobileTab, setActiveMobileTab] = useState<'vote' | 'results'>('vote');
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -124,23 +123,16 @@ export default function App() {
     addToast('Nueva ronda de votación iniciada.', 'info');
   };
 
-  const handleSelectTask = (taskId: string | null) => {
-    dbService.selectTask(taskId);
-    if (taskId && roomState.tasks && roomState.tasks[taskId]) {
-      addToast(`Tarea activa: "${roomState.tasks[taskId].title}"`, 'info');
-    }
+  const handleStartNewTask = (title: string, description: string) => {
+    dbService.startNewActiveTask(title, description);
   };
 
-  const handleCreateTask = (title: string, description: string) => {
-    dbService.createTask(title, description);
-  };
-
-  const handleUpdateTask = (id: string, title: string, description: string) => {
+  const handleUpdateActiveTask = (id: string, title: string, description: string) => {
     dbService.updateTask(id, title, description);
   };
 
-  const handleDeleteTask = (id: string) => {
-    dbService.deleteTask(id);
+  const handleClearActiveTask = () => {
+    dbService.clearActiveTask();
   };
 
   // Derived attributes
@@ -155,7 +147,10 @@ export default function App() {
   const currentVote = myParticipantRecord ? myParticipantRecord.vote : null;
 
   const totalParticipants = Object.keys(roomState.participants || {}).length;
-  const votedCount = Object.values(roomState.participants || {}).filter((p: any) => p.vote !== null).length;
+  const hasActiveTask = roomState.system.activeTaskId !== null;
+  const votedCount = hasActiveTask
+    ? Object.values(roomState.participants || {}).filter((p: any) => p.vote !== null).length
+    : 0;
 
   return (
     <div id="app-container" className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#020617] dark:text-slate-200 flex flex-col font-sans antialiased transition-colors duration-200">
@@ -236,22 +231,11 @@ export default function App() {
             Tablero
           </button>
           <button
-            onClick={() => setActiveMobileTab('tasks')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-lg transition-all ${
-              activeMobileTab === 'tasks'
-                ? 'bg-indigo-600 text-white shadow-sm font-bold'
-                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-          >
-            <ClipboardList className="w-3.5 h-3.5" />
-            Tareas
-          </button>
-          <button
             onClick={() => setActiveMobileTab('results')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-lg transition-all ${
               activeMobileTab === 'results'
                 ? 'bg-indigo-600 text-white shadow-sm font-bold'
-                : 'text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                : 'text-slate-500 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             <BarChart2 className="w-3.5 h-3.5" />
@@ -268,6 +252,7 @@ export default function App() {
               participants={roomState.participants}
               currentUserId={userId || ''}
               reveal={roomState.system.reveal}
+              activeTaskId={roomState.system.activeTaskId}
             />
           </div>
 
@@ -282,33 +267,22 @@ export default function App() {
               onVote={handleVote}
               onReveal={handleReveal}
               onReset={handleReset}
+              onStartNewTask={handleStartNewTask}
+              onUpdateActiveTask={handleUpdateActiveTask}
+              onClearActiveTask={handleClearActiveTask}
               addToast={addToast}
             />
           </div>
 
-          {/* Panel C (Right sidebar): Tasks & Statistics */}
-          {/* Mobile view logic handles sub-switching */}
-          <div className={`lg:col-span-3 h-full flex flex-col gap-6 ${
-            activeMobileTab === 'tasks' ? 'block' : activeMobileTab === 'results' ? 'hidden' : 'hidden lg:flex'
-          }`}>
-            <PanelTasks
-              tasks={roomState.tasks}
-              activeTaskId={roomState.system.activeTaskId}
-              onSelectTask={handleSelectTask}
-              onCreateTask={handleCreateTask}
-              onUpdateTask={handleUpdateTask}
-              onDeleteTask={handleDeleteTask}
-              addToast={addToast}
-            />
-          </div>
-
+          {/* Panel C (Right sidebar): Results / Statistics */}
           <div className={`lg:col-span-3 h-full ${
-            activeMobileTab === 'results' ? 'block' : activeMobileTab === 'tasks' ? 'hidden' : 'hidden lg:block'
+            activeMobileTab === 'results' ? 'block' : 'hidden lg:block'
           }`}>
             <PanelResults
               participants={roomState.participants}
               reveal={roomState.system.reveal}
               onReveal={handleReveal}
+              activeTaskId={roomState.system.activeTaskId}
             />
           </div>
 

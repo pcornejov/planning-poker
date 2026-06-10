@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, Check, Eye, RotateCcw, 
-  HelpCircle, ChevronRight, PlayCircle, Layers 
+  HelpCircle, Layers, Edit3, Trash2, Plus, Play, X 
 } from 'lucide-react';
 import { Task, VoteValue, FIBONACCI_SCALE } from '../types';
 
@@ -20,6 +20,9 @@ interface PanelPokerProps {
   onVote: (vote: VoteValue | null) => void;
   onReveal: () => void;
   onReset: () => void;
+  onStartNewTask: (title: string, description: string) => void;
+  onUpdateActiveTask: (taskId: string, title: string, description: string) => void;
+  onClearActiveTask: () => void;
   addToast: (text: string, type: 'success' | 'warning' | 'info') => void;
 }
 
@@ -32,64 +35,205 @@ export default function PanelPoker({
   onVote,
   onReveal,
   onReset,
+  onStartNewTask,
+  onUpdateActiveTask,
+  onClearActiveTask,
   addToast,
 }: PanelPokerProps) {
+  // Input states for creating
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDesc, setTaskDesc] = useState('');
+
+  // Editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+
+  // Sync editing inputs when activeTask changes or we enter editing mode
+  useEffect(() => {
+    if (activeTask) {
+      setEditTitle(activeTask.title);
+      setEditDesc(activeTask.description || '');
+    } else {
+      setIsEditing(false);
+    }
+  }, [activeTask, isEditing]);
 
   const handleCardClick = (val: VoteValue) => {
     if (!activeTask) {
-      addToast('Primero debes seleccionar o crear una tarea activa para votar.', 'warning');
+      addToast('Primero debes definir una tarea para poder votar.', 'warning');
       return;
     }
     if (reveal) {
-      addToast('La votación está cerrada en esta ronda. Reinicia la ronda para volver a votar.', 'warning');
+      addToast('La votación está cerrada. Inicia una nueva ronda o define otra tarea para votar.', 'warning');
       return;
     }
 
     if (currentVote === val) {
-      // Toggle off / clear vote
       onVote(null);
-      addToast('Voto removido.', 'info');
+      addToast('Voto anulado.', 'info');
     } else {
       onVote(val);
       addToast(`¡Has votado ${val}!`, 'success');
     }
   };
 
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskTitle.trim()) {
+      addToast('Por favor, ingresa un título para la tarea.', 'warning');
+      return;
+    }
+    onStartNewTask(taskTitle.trim(), taskDesc.trim());
+    setTaskTitle('');
+    setTaskDesc('');
+    addToast('¡Tarea asignada! Estimación y votos inicializados.', 'success');
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeTask) return;
+    if (!editTitle.trim()) {
+      addToast('El título de la tarea no puede estar vacío.', 'warning');
+      return;
+    }
+    onUpdateActiveTask(activeTask.id, editTitle.trim(), editDesc.trim());
+    setIsEditing(false);
+    addToast('Tarea modificada con éxito.', 'success');
+  };
+
   return (
     <div id="panel-poker-root" className="flex flex-col gap-6 h-full justify-between">
-      {/* 1. Active Task Details header */}
-      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-        {activeTask ? (
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1.5">
-              <Sparkles className="w-3.5 h-3.5 fill-indigo-500/25" />
-              Tarea bajo estimación
+      {/* 1. Active Task Details or Creation / Editing Area */}
+      <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-all">
+        {isEditing && activeTask ? (
+          /* EDITING CURRENT ACTIVE TASK FORM */
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-900/50">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                Editar Tarea en Estimación
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <h1 className="font-sans font-bold text-xl md:text-2xl text-slate-900 dark:text-white tracking-tight leading-tight">
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Título de la Tarea</label>
+              <input
+                id="edit-task-title"
+                type="text"
+                required
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Descripción (Opcional)</label>
+              <textarea
+                id="edit-task-desc"
+                value={editDesc}
+                rows={3}
+                onChange={(e) => setEditDesc(e.target.value)}
+                className="w-full text-xs bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 resize-none focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onClearActiveTask();
+                  setIsEditing(false);
+                  addToast('Tarea removida de estimación', 'info');
+                }}
+                className="flex items-center gap-1.5 text-rose-500 hover:text-rose-600 font-bold text-xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Eliminar Tarea
+              </button>
+              
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow shadow-indigo-500/10 transition"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : activeTask ? (
+          /* ACTIVE TASK VIEW */
+          <div>
+            <div className="flex items-center justify-between gap-4 mb-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+                <Sparkles className="w-3.5 h-3.5 fill-indigo-500/25 animate-pulse" />
+                En Curso
+              </div>
+
+              {/* Action tools */}
+              <div className="flex items-center gap-1">
+                <button
+                  id="btn-edit-active-task"
+                  onClick={() => setIsEditing(true)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition"
+                  title="Editar detalles de la tarea"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button
+                  id="btn-clear-active-task"
+                  onClick={() => {
+                    onClearActiveTask();
+                    addToast('Se quitó la tarea actual. Votos reiniciados.', 'info');
+                  }}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition"
+                  title="Terminar estimación de esta tarea"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <h1 className="font-sans font-extrabold text-xl md:text-2xl text-slate-900 dark:text-white tracking-tight leading-tight">
               {activeTask.title}
             </h1>
+            
             {activeTask.description ? (
-              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 border-l-2 border-slate-200 dark:border-slate-800 pl-3 leading-relaxed">
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-450 border-l-2 border-slate-200 dark:border-slate-800 pl-3 leading-relaxed whitespace-pre-line">
                 {activeTask.description}
               </p>
             ) : (
-              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500 italic">
-                Sin descripción detallada.
+              <p className="mt-2.5 text-xs text-slate-400 dark:text-slate-500 italic">
+                Sin descripción o criterios de aceptación detallados.
               </p>
             )}
 
-            {/* Quick status dots */}
-            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-900/50 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+            {/* Status Footer section */}
+            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-900/40 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
               <div className="flex items-center gap-4">
                 <div>
                   Participantes: <strong className="text-slate-900 dark:text-white">{totalParticipants}</strong>
                 </div>
                 <div>
-                  Votaron: <strong className="text-emerald-500 dark:text-emerald-400">{votedCount}</strong>
+                  Votaron: <strong className="text-emerald-505 font-bold text-emerald-600 dark:text-emerald-400">{votedCount}</strong>
                 </div>
               </div>
 
-              {/* Direct game control trigger */}
               <div className="flex gap-2">
                 {!reveal ? (
                   <button
@@ -98,38 +242,93 @@ export default function PanelPoker({
                     disabled={votedCount < totalParticipants || totalParticipants === 0}
                     title={
                       totalParticipants === 0 
-                        ? 'No hay participantes activos en la sesión' 
+                        ? 'No hay participantes activos' 
                         : votedCount < totalParticipants 
-                          ? `Falta que voten algunos participantes (${votedCount}/${totalParticipants})` 
-                          : '¡Revelar estimaciones!'
+                          ? `Faltan votar participantes (${votedCount}/${totalParticipants})` 
+                          : '¡Revelar votos!'
                     }
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white transition-all shadow shadow-indigo-500/10 cursor-pointer disabled:cursor-not-allowed"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow shadow-indigo-500/10 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     Revelar votos
                   </button>
                 ) : (
-                  <button
-                    id="btn-reset-voting"
-                    onClick={onReset}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080d1a] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Nueva ronda
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      id="btn-new-task-round"
+                      onClick={() => {
+                        onClearActiveTask();
+                        addToast('Prepara el título para tu siguiente tarea de estimación.', 'info');
+                      }}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#080d1a] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Nueva Tarea
+                    </button>
+                    <button
+                      id="btn-reset-voting"
+                      onClick={onReset}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition cursor-pointer"
+                      title="Reiniciar estimación sobre la misma tarea"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Re-estimar
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         ) : (
-          <div className="text-center py-6">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-950 text-slate-400 dark:text-slate-600 mb-3 border border-slate-100 dark:border-slate-800">
-              <Layers className="w-5 h-5 text-indigo-500/80" />
+          /* CREATING A NEW TASK FORM (EMPTY STATE OVERLAY) */
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                <Layers className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-sans font-bold text-sm text-slate-900 dark:text-white leading-none">
+                  Nueva Tarea para Estimar
+                </h3>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  Introduce los datos para comenzar el voto automáticamente
+                </p>
+              </div>
             </div>
-            <h3 className="text-sm font-bold text-slate-950 dark:text-white">Ninguna tarea activa registrada</h3>
-            <p className="mt-1 text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-              Por favor selecciona o crea una tarea en el panel de **Tareas** para habilitar la votación del equipo.
-            </p>
+
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <input
+                  id="new-task-title"
+                  type="text"
+                  required
+                  placeholder="Ej: Diseñar Dashboard, Endpoint de pagos, Corregir bug..."
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  className="w-full text-xs font-semibold bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-3 focus:border-indigo-540 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <textarea
+                  id="new-task-desc"
+                  placeholder="Descripción, requerimientos o criterios de aceptación (opcional)..."
+                  value={taskDesc}
+                  rows={2}
+                  onChange={(e) => setTaskDesc(e.target.value)}
+                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 resize-none focus:border-indigo-540 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <button
+                id="btn-start-voting-submit"
+                type="submit"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow shadow-indigo-500/10 hover:shadow-indigo-500/15 transition cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-white" />
+                Iniciar Estimación de Tarea
+              </button>
+            </form>
           </div>
         )}
       </div>
@@ -143,11 +342,11 @@ export default function PanelPoker({
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
             {activeTask 
               ? reveal 
-                ? 'Votación concluida. Inicia una nueva ronda para habilitar el mazo.' 
+                ? 'Votación concluida. Haz clic en "Nueva Tarea" o "Re-estimar" para continuar.' 
                 : currentVote 
-                  ? 'Estimación seleccionada. Haz clic en la misma carta para anular tu voto.' 
-                  : 'Selecciona una de las cartas Fibonacci basadas en esfuerzo u horas:'
-              : 'Selecciona primero una tarea en el panel lateral para desbloquear las cartas.'
+                  ? 'Estimación seleccionada. Haz clic en la misma carta si deseas quitar tu voto.' 
+                  : 'Selecciona una de las cartas Fibonacci basadas en esfuerzo o complejidad:'
+              : 'Escribe y crea una tarea arriba para desbloquear y habilitar la votación.'
             }
           </p>
         </div>
@@ -155,11 +354,11 @@ export default function PanelPoker({
         {/* The Grid Deck */}
         <div 
           id="fibonacci-deck-grid" 
-          className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 md:gap-4 p-1 ${
+          className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 md:gap-4 p-1 transition-opacity ${
             !activeTask || reveal ? 'opacity-40 cursor-not-allowed select-none' : ''
           }`}
         >
-          {FIBONACCI_SCALE.map((value, i) => {
+          {FIBONACCI_SCALE.map((value) => {
             const isSelected = currentVote === value;
             return (
               <motion.button
@@ -176,10 +375,10 @@ export default function PanelPoker({
                     : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] text-slate-900 dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500/50 hover:bg-indigo-50/20 dark:hover:bg-indigo-500/[0.01]'
                 }`}
               >
-                {/* Micro corner indicators resembling official poker playing cards */}
+                {/* corner indicators */}
                 <div className="w-full flex justify-between text-[11px] font-bold opacity-60 leading-none">
                   <span>{value}</span>
-                  {value === '?' ? <HelpCircle className="w-3 h-3" /> : <span>♠</span>}
+                  {value === '?' ? <HelpCircle className="w-3" /> : <span>♠</span>}
                 </div>
 
                 {/* Big Center Display */}
@@ -189,9 +388,9 @@ export default function PanelPoker({
                   {value}
                 </span>
 
-                {/* Lower corner reflections card checkmarks */}
+                {/* Lower checkmarks reflection */}
                 <div className="w-full flex justify-between items-center text-[11px] font-semibold leading-none opacity-60">
-                  {value === '?' ? <HelpCircle className="w-3 h-3" /> : <span>♠</span>}
+                  {value === '?' ? <HelpCircle className="w-3" /> : <span>♠</span>}
                   
                   {isSelected ? (
                     <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-indigo-600 font-bold text-[9px]">

@@ -13,12 +13,14 @@ interface PanelParticipantsProps {
   participants: Record<string, Participant>;
   currentUserId: string;
   reveal: boolean;
+  activeTaskId: string | null;
 }
 
-export default function PanelParticipants({ participants, currentUserId, reveal }: PanelParticipantsProps) {
+export default function PanelParticipants({ participants, currentUserId, reveal, activeTaskId }: PanelParticipantsProps) {
   const pList = Object.values(participants || {}).sort((a, b) => b.joinedAt - a.joinedAt);
   const totalCount = pList.length;
-  const votedCount = pList.filter(p => p.vote !== null).length;
+  const hasActiveTask = activeTaskId !== null;
+  const votedCount = hasActiveTask ? pList.filter(p => p.vote !== null).length : 0;
 
   return (
     <div id="panel-participants-root" className="flex h-full flex-col bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
@@ -54,7 +56,7 @@ export default function PanelParticipants({ participants, currentUserId, reveal 
             <AnimatePresence initial={false}>
               {pList.map((p) => {
                 const isMe = p.id === currentUserId;
-                const hasVoted = p.vote !== null;
+                const hasVoted = hasActiveTask && p.vote !== null;
 
                 return (
                   <motion.div
@@ -70,69 +72,73 @@ export default function PanelParticipants({ participants, currentUserId, reveal 
                          : 'border-slate-50 dark:border-slate-900/60 bg-slate-50/40 dark:bg-slate-900/40'
                      }`}
                   >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      {/* Avatar Bubble */}
-                      <div className={`flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl font-bold text-sm tracking-tight transition-color duration-200 ${
-                        hasVoted 
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30' 
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}>
-                        {p.name.charAt(0).toUpperCase()}
-                      </div>
+                     <div className="flex items-center gap-3 overflow-hidden">
+                       {/* Avatar Bubble */}
+                       <div className={`flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl font-bold text-sm tracking-tight transition-color duration-200 ${
+                         hasVoted 
+                           ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30' 
+                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                       }`}>
+                         {p.name.charAt(0).toUpperCase()}
+                       </div>
 
-                      {/* Name Details */}
-                      <div className="overflow-hidden">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate block">
-                            {p.name}
-                          </span>
-                          {isMe && (
-                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 flex-shrink-0">
-                              Tú
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
-                          {hasVoted ? 'Voto cargado' : 'Falta votar'}
-                        </span>
-                      </div>
-                    </div>
+                       {/* Name Details */}
+                       <div className="overflow-hidden">
+                         <div className="flex items-center gap-1.5">
+                           <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate block">
+                             {p.name}
+                           </span>
+                           {isMe && (
+                             <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 flex-shrink-0">
+                               Tú
+                             </span>
+                           )}
+                         </div>
+                         <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
+                           {hasActiveTask ? (hasVoted ? 'Voto cargado' : 'Falta votar') : 'Sin tarea activa'}
+                         </span>
+                       </div>
+                     </div>
 
-                    {/* Voting State Visual */}
-                    <div className="flex items-center gap-2">
-                      {reveal ? (
-                        /* Vote value is revealed */
-                        <motion.div
-                          initial={{ scale: 0, rotateY: -180 }}
-                          animate={{ scale: 1, rotateY: 0 }}
-                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                          className={`flex h-8.5 w-8.5 items-center justify-center rounded-lg font-bold text-sm border shadow-sm ${
-                            hasVoted
-                              ? 'bg-indigo-600 border-indigo-600 text-white dark:border-indigo-400'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-dashed border-slate-205 dark:border-slate-700'
-                          }`}
-                        >
-                          {hasVoted ? p.vote : '-'}
-                        </motion.div>
-                      ) : (
-                        /* Vote is hidden or pending */
-                        hasVoted ? (
-                          <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/25 text-emerald-600 dark:text-emerald-400 border border-emerald-100/55 dark:border-emerald-900/20 text-xs font-semibold"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
-                            Listo
-                          </motion.div>
-                        ) : (
-                          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400/90 text-xs font-semibold border border-amber-100/30">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-550 dark:bg-amber-400 animate-pulse" />
-                            Falta votar
-                          </span>
-                        )
-                      )}
-                    </div>
+                     {/* Voting State Visual */}
+                     <div className="flex items-center gap-2">
+                       {reveal ? (
+                         /* Vote value is revealed */
+                         <motion.div
+                           initial={{ scale: 0, rotateY: -180 }}
+                           animate={{ scale: 1, rotateY: 0 }}
+                           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                           className={`flex h-8.5 w-8.5 items-center justify-center rounded-lg font-bold text-sm border shadow-sm ${
+                             hasVoted
+                               ? 'bg-indigo-600 border-indigo-600 text-white dark:border-indigo-400'
+                               : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-dashed border-slate-205 dark:border-slate-700'
+                           }`}
+                         >
+                           {hasVoted ? p.vote : '-'}
+                         </motion.div>
+                       ) : (
+                         /* Vote is hidden or pending */
+                         hasVoted ? (
+                           <motion.div
+                             initial={{ scale: 0.8, opacity: 0 }}
+                             animate={{ scale: 1, opacity: 1 }}
+                             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/25 text-emerald-600 dark:text-emerald-400 border border-emerald-100/55 dark:border-emerald-900/20 text-xs font-semibold"
+                           >
+                             <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                             Listo
+                           </motion.div>
+                         ) : (
+                           <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${
+                             hasActiveTask
+                               ? 'bg-amber-50/70 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400/90 border-amber-100/30'
+                               : 'bg-slate-50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500 border-transparent'
+                           }`}>
+                             {hasActiveTask && <span className="w-1.5 h-1.5 rounded-full bg-amber-550 dark:bg-amber-400 animate-pulse" />}
+                             {hasActiveTask ? 'Falta votar' : 'Sin tarea'}
+                           </span>
+                         )
+                       )}
+                     </div>
                   </motion.div>
                 );
               })}

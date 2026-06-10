@@ -15,12 +15,16 @@ interface PanelResultsProps {
   participants: Record<string, Participant>;
   reveal: boolean;
   onReveal: () => void;
+  activeTaskId: string | null;
 }
 
-export default function PanelResults({ participants = {}, reveal, onReveal }: PanelResultsProps) {
+export default function PanelResults({ participants = {}, reveal, onReveal, activeTaskId }: PanelResultsProps) {
   const pList = Object.values(participants || {});
   const totalParticipants = pList.length;
-  const votes = pList.filter(p => p.vote !== null).map(p => p.vote as VoteValue);
+  const hasActiveTask = activeTaskId !== null;
+  const votes = hasActiveTask 
+    ? pList.filter(p => p.vote !== null).map(p => p.vote as VoteValue)
+    : [];
   const votedCount = votes.length;
 
   // Filter numeric votes for average calculations
@@ -119,13 +123,15 @@ export default function PanelResults({ participants = {}, reveal, onReveal }: Pa
             <button
               id="btn-reveal-results-panel"
               onClick={onReveal}
-              disabled={votedCount < totalParticipants || totalParticipants === 0}
+              disabled={!hasActiveTask || votedCount < totalParticipants || totalParticipants === 0}
               title={
-                totalParticipants === 0 
-                  ? 'No hay participantes activos en la sesión' 
-                  : votedCount < totalParticipants 
-                    ? `Falta que voten algunos participantes (${votedCount}/${totalParticipants})` 
-                    : '¡Revelar ahora!'
+                !hasActiveTask
+                  ? 'No hay ninguna tarea activa para revelar'
+                  : totalParticipants === 0 
+                    ? 'No hay participantes activos en la sesión' 
+                    : votedCount < totalParticipants 
+                      ? `Falta que voten algunos participantes (${votedCount}/${totalParticipants})` 
+                      : '¡Revelar ahora!'
               }
               className="mt-6 w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 font-semibold text-xs py-3.5 transition cursor-pointer disabled:cursor-not-allowed"
             >
