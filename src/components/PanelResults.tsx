@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { 
-  BarChart2, Lock, Eye, AlertTriangle, Check,
+  BarChart2, Lock, Eye, AlertTriangle, Check, Coffee,
   HelpCircle, Sparkles, Star, Users, CheckSquare 
 } from 'lucide-react';
 import { Participant, VoteValue, FIBONACCI_SCALE } from '../types';
@@ -213,8 +213,8 @@ export default function PanelResults({ participants = {}, reveal, onReveal, acti
                     return (
                       <div key={fib} className="flex items-center gap-3">
                         {/* Vote Label Card indicator */}
-                        <div className="w-12 flex-shrink-0 font-bold text-right text-xs text-slate-900 dark:text-slate-200">
-                          Carta {fib}
+                        <div className="w-14 flex-shrink-0 font-bold text-right text-xs text-slate-900 dark:text-slate-200">
+                          {fib === '☕' ? '☕ Café' : `Carta ${fib}`}
                         </div>
                         {/* Progress Bar container */}
                         <div className="flex-1 h-5 bg-slate-50 dark:bg-slate-950 rounded-lg overflow-hidden position-relative border border-slate-100 dark:border-slate-850">

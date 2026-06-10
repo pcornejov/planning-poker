@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, Check, Eye, RotateCcw, 
-  HelpCircle, Layers, Edit3, Trash2, Plus, Play, X 
+  HelpCircle, Layers, Edit3, Trash2, Plus, Play, X,
+  Coffee
 } from 'lucide-react';
 import { Task, VoteValue, FIBONACCI_SCALE } from '../types';
 
@@ -340,17 +341,23 @@ export default function PanelPoker({
                 }`}
               >
                 {/* corner indicators */}
-                <div className="w-full flex justify-between text-[11px] font-bold opacity-60 leading-none">
-                  <span>{value}</span>
+                <div className="w-full flex justify-between text-[11px] font-bold opacity-60 leading-none items-center">
+                  {value === '☕' ? <Coffee className="w-3.5 h-3.5" /> : <span>{value}</span>}
                   {value === '?' ? <HelpCircle className="w-3" /> : <span>♠</span>}
                 </div>
 
                 {/* Big Center Display */}
-                <span className={`text-3xl md:text-4xl font-sans font-extrabold tracking-tighter ${
-                  isSelected ? 'scale-110 text-white' : 'text-slate-950 dark:text-white'
-                }`}>
-                  {value}
-                </span>
+                {value === '☕' ? (
+                  <Coffee className={`w-8 h-8 md:w-10 md:h-10 transition-transform ${
+                    isSelected ? 'scale-110 text-white' : 'text-slate-950 dark:text-white'
+                  }`} />
+                ) : (
+                  <span className={`text-3xl md:text-4xl font-sans font-extrabold tracking-tighter ${
+                    isSelected ? 'scale-110 text-white' : 'text-slate-950 dark:text-white'
+                  }`}>
+                    {value}
+                  </span>
+                )}
 
                 {/* Lower checkmarks reflection */}
                 <div className="w-full flex justify-between items-center text-[11px] font-semibold leading-none opacity-60">
@@ -360,6 +367,8 @@ export default function PanelPoker({
                     <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-indigo-600 font-bold text-[9px]">
                       ✓
                     </span>
+                  ) : value === '☕' ? (
+                    <Coffee className="w-3.5 h-3.5" />
                   ) : (
                     <span>{value}</span>
                   )}

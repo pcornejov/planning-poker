@@ -4,8 +4,8 @@
  */
 
 import React from 'react';
-import { Users, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
-import { Participant } from '../types';
+import { Users, CheckCircle2, Circle, AlertCircle, Coffee } from 'lucide-react';
+import { Participant, VoteValue } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { isFirebaseConfigured } from '../firebase';
 
@@ -114,7 +114,7 @@ export default function PanelParticipants({ participants, currentUserId, reveal,
                                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-dashed border-slate-205 dark:border-slate-700'
                            }`}
                          >
-                           {hasVoted ? p.vote : '-'}
+                           {hasVoted ? (p.vote === '☕' ? <Coffee className="w-4 h-4 text-white" /> : p.vote) : '-'}
                          </motion.div>
                        ) : (
                          /* Vote is hidden or pending */
