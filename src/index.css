@@ -7,6 +7,8 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+@variant dark (&:where(.dark, .dark *));
+
 /* Custom fine-grained scrollbar for active lists */
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;

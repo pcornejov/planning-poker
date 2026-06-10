@@ -190,7 +190,7 @@ export default function App() {
               <div className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-900/60">
                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                  Alex Rivera <span className="text-indigo-600 dark:text-indigo-400">({userName})</span>
+                  {userName}
                 </span>
                 <button
                   id="btn-logout-header"

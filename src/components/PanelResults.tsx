@@ -119,7 +119,14 @@ export default function PanelResults({ participants = {}, reveal, onReveal }: Pa
             <button
               id="btn-reveal-results-panel"
               onClick={onReveal}
-              disabled={votedCount === 0}
+              disabled={votedCount < totalParticipants || totalParticipants === 0}
+              title={
+                totalParticipants === 0 
+                  ? 'No hay participantes activos en la sesión' 
+                  : votedCount < totalParticipants 
+                    ? `Falta que voten algunos participantes (${votedCount}/${totalParticipants})` 
+                    : '¡Revelar ahora!'
+              }
               className="mt-6 w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 font-semibold text-xs py-3.5 transition cursor-pointer disabled:cursor-not-allowed"
             >
               <Eye className="w-3.5 h-3.5" />

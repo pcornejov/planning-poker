@@ -95,7 +95,14 @@ export default function PanelPoker({
                   <button
                     id="btn-reveal-voting"
                     onClick={onReveal}
-                    disabled={votedCount === 0}
+                    disabled={votedCount < totalParticipants || totalParticipants === 0}
+                    title={
+                      totalParticipants === 0 
+                        ? 'No hay participantes activos en la sesión' 
+                        : votedCount < totalParticipants 
+                          ? `Falta que voten algunos participantes (${votedCount}/${totalParticipants})` 
+                          : '¡Revelar estimaciones!'
+                    }
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white transition-all shadow shadow-indigo-500/10 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <Eye className="w-3.5 h-3.5" />
