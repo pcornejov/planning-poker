@@ -199,23 +199,12 @@ class DbService {
             console.error('Error setting onDisconnect handler:', err);
           });
 
-          // Join active session
-          // Retrieve current vote if they are already in the UI state
-          get(userRef).then((userSnap) => {
-            const currentVoteValue = userSnap.exists() ? userSnap.val().vote : null;
-            set(userRef, {
-              id: userId,
-              name: userName,
-              vote: currentVoteValue || null,
-              joinedAt: Date.now(),
-            });
-          }).catch(() => {
-            set(userRef, {
-              id: userId,
-              name: userName,
-              vote: null,
-              joinedAt: Date.now(),
-            });
+          // Join active session with a cleared vote (fresh estimation round)
+          set(userRef, {
+            id: userId,
+            name: userName,
+            vote: null,
+            joinedAt: Date.now(),
           });
         }
       });
@@ -240,6 +229,13 @@ class DbService {
 
     } else {
       // Local fallback mode
+      this.loadLocalState();
+      if (!this.localState.participants) this.localState.participants = {};
+      if (this.localState.participants[userId]) {
+        this.localState.participants[userId].vote = null;
+      }
+      this.broadcastState();
+
       this.startLocalHeartbeats();
       onStateUpdate(this.cleanState(this.localState));
 
@@ -420,17 +416,31 @@ class DbService {
     if (isFirebaseConfigured && db) {
       const fns = await getFirebaseDBFunctions();
       if (!fns) return;
-      const { ref: fRef, set } = fns;
+      const { ref: fRef, update, get } = fns;
 
-      const activeRef = fRef(db, `system/activeTaskId`);
-      await set(activeRef, taskId);
-      // Automatically reset reveal state when switching task to vote fresh
-      const revealRef = fRef(db, `system/reveal`);
-      await set(revealRef, false);
+      // 1. Collect update map to transition to new task and reset reveal state
+      const updateMap: Record<string, any> = {};
+      updateMap[`system/activeTaskId`] = taskId;
+      updateMap[`system/reveal`] = false;
+
+      // 2. Clear all participants' votes for the new task
+      const participantsRef = fRef(db, 'participants');
+      const snap = await get(participantsRef);
+      if (snap.exists()) {
+        const users = snap.val();
+        Object.keys(users).forEach(uId => {
+          updateMap[`participants/${uId}/vote`] = null;
+        });
+      }
+
+      await update(fRef(db, '/'), updateMap);
     } else {
       this.loadLocalState();
       this.localState.system.activeTaskId = taskId;
       this.localState.system.reveal = false;
+      Object.keys(this.localState.participants || {}).forEach(uId => {
+        this.localState.participants[uId].vote = null;
+      });
       this.broadcastState();
     }
   }
