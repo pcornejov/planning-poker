@@ -85,7 +85,7 @@ export default function PanelPoker({
                   Participantes: <strong className="text-slate-900 dark:text-white">{totalParticipants}</strong>
                 </div>
                 <div>
-                  Votraron: <strong className="text-emerald-500 dark:text-emerald-400">{votedCount}</strong>
+                  Votaron: <strong className="text-emerald-500 dark:text-emerald-400">{votedCount}</strong>
                 </div>
               </div>
 

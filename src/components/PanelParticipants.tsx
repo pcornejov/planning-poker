@@ -83,7 +83,7 @@ export default function PanelParticipants({ participants, currentUserId, reveal 
                       {/* Name Details */}
                       <div className="overflow-hidden">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-sm text-slate-905 dark:text-slate-100 truncate block">
+                          <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate block">
                             {p.name}
                           </span>
                           {isMe && (
