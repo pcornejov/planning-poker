@@ -23,7 +23,7 @@ export default function PanelResults({ participants = {}, reveal, onReveal, acti
   const totalParticipants = pList.length;
   const hasActiveTask = activeTaskId !== null;
   const votes = hasActiveTask 
-    ? pList.filter(p => p.vote !== null).map(p => p.vote as VoteValue)
+    ? pList.filter(p => p.vote !== null && p.vote !== undefined).map(p => p.vote as VoteValue)
     : [];
   const votedCount = votes.length;
 

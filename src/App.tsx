@@ -149,7 +149,7 @@ export default function App() {
   const totalParticipants = Object.keys(roomState.participants || {}).length;
   const hasActiveTask = roomState.system.activeTaskId !== null;
   const votedCount = hasActiveTask
-    ? Object.values(roomState.participants || {}).filter((p: any) => p.vote !== null).length
+    ? Object.values(roomState.participants || {}).filter((p: any) => p.vote !== null && p.vote !== undefined).length
     : 0;
 
   return (

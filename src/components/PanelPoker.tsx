@@ -42,18 +42,15 @@ export default function PanelPoker({
 }: PanelPokerProps) {
   // Input states for creating
   const [taskTitle, setTaskTitle] = useState('');
-  const [taskDesc, setTaskDesc] = useState('');
 
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [editDesc, setEditDesc] = useState('');
 
   // Sync editing inputs when activeTask changes or we enter editing mode
   useEffect(() => {
     if (activeTask) {
       setEditTitle(activeTask.title);
-      setEditDesc(activeTask.description || '');
     } else {
       setIsEditing(false);
     }
@@ -84,9 +81,8 @@ export default function PanelPoker({
       addToast('Por favor, ingresa un título para la tarea.', 'warning');
       return;
     }
-    onStartNewTask(taskTitle.trim(), taskDesc.trim());
+    onStartNewTask(taskTitle.trim(), '');
     setTaskTitle('');
-    setTaskDesc('');
     addToast('¡Tarea asignada! Estimación y votos inicializados.', 'success');
   };
 
@@ -97,7 +93,7 @@ export default function PanelPoker({
       addToast('El título de la tarea no puede estar vacío.', 'warning');
       return;
     }
-    onUpdateActiveTask(activeTask.id, editTitle.trim(), editDesc.trim());
+    onUpdateActiveTask(activeTask.id, editTitle.trim(), '');
     setIsEditing(false);
     addToast('Tarea modificada con éxito.', 'success');
   };
@@ -131,17 +127,6 @@ export default function PanelPoker({
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Descripción (Opcional)</label>
-              <textarea
-                id="edit-task-desc"
-                value={editDesc}
-                rows={3}
-                onChange={(e) => setEditDesc(e.target.value)}
-                className="w-full text-xs bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 resize-none focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
@@ -212,16 +197,6 @@ export default function PanelPoker({
             <h1 className="font-sans font-extrabold text-xl md:text-2xl text-slate-900 dark:text-white tracking-tight leading-tight">
               {activeTask.title}
             </h1>
-            
-            {activeTask.description ? (
-              <p className="mt-3 text-sm text-slate-500 dark:text-slate-450 border-l-2 border-slate-200 dark:border-slate-800 pl-3 leading-relaxed whitespace-pre-line">
-                {activeTask.description}
-              </p>
-            ) : (
-              <p className="mt-2.5 text-xs text-slate-400 dark:text-slate-500 italic">
-                Sin descripción o criterios de aceptación detallados.
-              </p>
-            )}
 
             {/* Status Footer section */}
             <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-900/40 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
@@ -291,7 +266,7 @@ export default function PanelPoker({
                   Nueva Tarea para Estimar
                 </h3>
                 <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                  Introduce los datos para comenzar el voto automáticamente
+                  Introduce el título para comenzar el voto automáticamente
                 </p>
               </div>
             </div>
@@ -306,17 +281,6 @@ export default function PanelPoker({
                   value={taskTitle}
                   onChange={(e) => setTaskTitle(e.target.value)}
                   className="w-full text-xs font-semibold bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-3 focus:border-indigo-540 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <textarea
-                  id="new-task-desc"
-                  placeholder="Descripción, requerimientos o criterios de aceptación (opcional)..."
-                  value={taskDesc}
-                  rows={2}
-                  onChange={(e) => setTaskDesc(e.target.value)}
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/60 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 resize-none focus:border-indigo-540 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
 

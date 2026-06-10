@@ -20,7 +20,7 @@ export default function PanelParticipants({ participants, currentUserId, reveal,
   const pList = Object.values(participants || {}).sort((a, b) => b.joinedAt - a.joinedAt);
   const totalCount = pList.length;
   const hasActiveTask = activeTaskId !== null;
-  const votedCount = hasActiveTask ? pList.filter(p => p.vote !== null).length : 0;
+  const votedCount = hasActiveTask ? pList.filter(p => p.vote !== null && p.vote !== undefined).length : 0;
 
   return (
     <div id="panel-participants-root" className="flex h-full flex-col bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
@@ -56,7 +56,7 @@ export default function PanelParticipants({ participants, currentUserId, reveal,
             <AnimatePresence initial={false}>
               {pList.map((p) => {
                 const isMe = p.id === currentUserId;
-                const hasVoted = hasActiveTask && p.vote !== null;
+                const hasVoted = hasActiveTask && p.vote !== null && p.vote !== undefined;
 
                 return (
                   <motion.div

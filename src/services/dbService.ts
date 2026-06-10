@@ -209,6 +209,16 @@ class DbService {
         }
       });
 
+      // Force immediate vote reset on connection call to avoid race conditions or stale records
+      set(userRef, {
+        id: userId,
+        name: userName,
+        vote: null,
+        joinedAt: Date.now(),
+      }).catch(err => {
+        console.error('Error setting immediate user joined state:', err);
+      });
+
       // 2. Subscribe to general database changes
       if (firebaseOnValueUnsubscribe) firebaseOnValueUnsubscribe();
 
@@ -231,9 +241,15 @@ class DbService {
       // Local fallback mode
       this.loadLocalState();
       if (!this.localState.participants) this.localState.participants = {};
-      if (this.localState.participants[userId]) {
-        this.localState.participants[userId].vote = null;
-      }
+      
+      // Always initialize or reset the user's vote to null on connection!
+      this.localState.participants[userId] = {
+        id: userId,
+        name: userName,
+        vote: null,
+        joinedAt: Date.now(),
+      } as any;
+      
       this.broadcastState();
 
       this.startLocalHeartbeats();
