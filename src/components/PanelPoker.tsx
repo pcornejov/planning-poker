@@ -18,6 +18,7 @@ interface PanelPokerProps {
   reveal: boolean;
   totalParticipants: number;
   votedCount: number;
+  isSpectator?: boolean;
   onVote: (vote: VoteValue | null) => void;
   onReveal: () => void;
   onReset: () => void;
@@ -33,6 +34,7 @@ export default function PanelPoker({
   reveal,
   totalParticipants,
   votedCount,
+  isSpectator = false,
   onVote,
   onReveal,
   onReset,
@@ -58,6 +60,10 @@ export default function PanelPoker({
   }, [activeTask, isEditing]);
 
   const handleCardClick = (val: VoteValue) => {
+    if (isSpectator) {
+      addToast('Estás en modo espectador. Cambia a rol de votante arriba si deseas estimar.', 'warning');
+      return;
+    }
     if (!activeTask) {
       addToast('Primero debes definir una tarea para poder votar.', 'warning');
       return;
@@ -305,13 +311,15 @@ export default function PanelPoker({
             Tus cartas de estimación
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            {activeTask 
-              ? reveal 
-                ? 'Votación concluida. Haz clic en "Nueva Tarea" o "Re-estimar" para continuar.' 
-                : currentVote 
-                  ? 'Estimación seleccionada. Haz clic en la misma carta si deseas quitar tu voto.' 
-                  : 'Selecciona una de las cartas Fibonacci basadas en esfuerzo o complejidad:'
-              : 'Escribe y crea una tarea arriba para desbloquear y habilitar la votación.'
+            {isSpectator
+              ? 'Estás en modo espectador (no puedes votar). Cambia tu rol a votante arriba si deseas estimar.'
+              : activeTask 
+                ? reveal 
+                  ? 'Votación concluida. Haz clic en "Nueva Tarea" o "Re-estimar" para continuar.' 
+                  : currentVote 
+                    ? 'Estimación seleccionada. Haz clic en la misma carta si deseas quitar tu voto.' 
+                    : 'Selecciona una de las cartas Fibonacci basadas en esfuerzo o complejidad:'
+                : 'Escribe y crea una tarea arriba para desbloquear y habilitar la votación.'
             }
           </p>
         </div>
@@ -320,7 +328,7 @@ export default function PanelPoker({
         <div 
           id="fibonacci-deck-grid" 
           className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 md:gap-4 p-1 transition-opacity ${
-            !activeTask || reveal ? 'opacity-40 cursor-not-allowed select-none' : ''
+            !activeTask || reveal || isSpectator ? 'opacity-40 cursor-not-allowed select-none' : ''
           }`}
         >
           {FIBONACCI_SCALE.map((value) => {
@@ -330,9 +338,9 @@ export default function PanelPoker({
                 key={value}
                 id={`card-fibonacci-${value}`}
                 onClick={() => handleCardClick(value)}
-                disabled={!activeTask || reveal}
-                whileHover={{ scale: !activeTask || reveal ? 1 : 1.05 }}
-                whileTap={{ scale: !activeTask || reveal ? 1 : 0.95 }}
+                disabled={!activeTask || reveal || isSpectator}
+                whileHover={{ scale: !activeTask || reveal || isSpectator ? 1 : 1.05 }}
+                whileTap={{ scale: !activeTask || reveal || isSpectator ? 1 : 0.95 }}
                 transition={{ duration: 0.15 }}
                 className={`group relative aspect-[3/4.2] flex flex-col items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/45 ${
                   isSelected

@@ -22,8 +22,12 @@ export default function PanelResults({ participants = {}, reveal, onReveal, acti
   const pList = Object.values(participants || {});
   const totalParticipants = pList.length;
   const hasActiveTask = activeTaskId !== null;
+
+  // Separate voters and spectators
+  const voters = pList.filter(p => !p.isSpectator);
+  const totalVoters = voters.length;
   const votes = hasActiveTask 
-    ? pList.filter(p => p.vote !== null && p.vote !== undefined).map(p => p.vote as VoteValue)
+    ? voters.filter(p => p.vote !== null && p.vote !== undefined).map(p => p.vote as VoteValue)
     : [];
   const votedCount = votes.length;
 
@@ -71,6 +75,50 @@ export default function PanelResults({ participants = {}, reveal, onReveal, acti
     }
   }
 
+  // 4. Outliers Calculation (Extreme values farthest from average, minimum & maximum)
+  interface Outlier {
+    participantName: string;
+    vote: string;
+    type: 'bajo' | 'alto';
+    diff: number;
+  }
+  const outliers: Outlier[] = [];
+
+  const votersWithNumericVotes = voters
+    .filter(p => p.vote !== null && p.vote !== undefined && p.vote !== '?' && p.vote !== '☕')
+    .map(p => ({
+      ...p,
+      voteNum: parseInt(p.vote as string, 10)
+    }))
+    .filter(p => !isNaN(p.voteNum));
+
+  if (votersWithNumericVotes.length >= 2 && hasNumericVotes) {
+    const nums = votersWithNumericVotes.map(v => v.voteNum);
+    const minVal = Math.min(...nums);
+    const maxVal = Math.max(...nums);
+
+    if (minVal !== maxVal) {
+      // Find participants who voted minVal
+      votersWithNumericVotes.forEach(p => {
+        if (p.voteNum === minVal) {
+          outliers.push({
+            participantName: p.name,
+            vote: p.vote as string,
+            type: 'bajo',
+            diff: Math.abs(p.voteNum - average)
+          });
+        } else if (p.voteNum === maxVal) {
+          outliers.push({
+            participantName: p.name,
+            vote: p.vote as string,
+            type: 'alto',
+            diff: Math.abs(p.voteNum - average)
+          });
+        }
+      });
+    }
+  }
+
   return (
     <div id="panel-results-root" className="flex h-full flex-col bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
       {/* Header */}
@@ -111,8 +159,8 @@ export default function PanelResults({ participants = {}, reveal, onReveal, acti
             {/* Micro details */}
             <div className="mt-6 w-full max-w-xs rounded-xl border border-slate-100 dark:border-slate-850 bg-slate-50/40 dark:bg-slate-900/20 p-3.5 space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-500 dark:text-slate-400">Participantes:</span>
-                <span className="font-bold text-slate-900 dark:text-white">{totalParticipants}</span>
+                <span className="text-slate-500 dark:text-slate-400">Votantes activos:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{totalVoters}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate-500 dark:text-slate-400">Votos emitidos:</span>
@@ -123,14 +171,14 @@ export default function PanelResults({ participants = {}, reveal, onReveal, acti
             <button
               id="btn-reveal-results-panel"
               onClick={onReveal}
-              disabled={!hasActiveTask || votedCount < totalParticipants || totalParticipants === 0}
+              disabled={!hasActiveTask || votedCount < totalVoters || totalVoters === 0}
               title={
                 !hasActiveTask
                   ? 'No hay ninguna tarea activa para revelar'
-                  : totalParticipants === 0 
-                    ? 'No hay participantes activos en la sesión' 
-                    : votedCount < totalParticipants 
-                      ? `Falta que voten algunos participantes (${votedCount}/${totalParticipants})` 
+                  : totalVoters === 0 
+                    ? 'No hay votantes activos en la sesión' 
+                    : votedCount < totalVoters 
+                      ? `Falta que voten algunos participantes (${votedCount}/${totalVoters})` 
                       : '¡Revelar ahora!'
               }
               className="mt-6 w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 font-semibold text-xs py-3.5 transition cursor-pointer disabled:cursor-not-allowed"
@@ -189,6 +237,60 @@ export default function PanelResults({ participants = {}, reveal, onReveal, acti
                   <p className="mt-1 leading-relaxed text-amber-600/90 dark:text-amber-400/90">
                     Existe una diferencia importante entre las estimaciones. Se recomienda discutir antes de volver a votar.
                   </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Outliers highlight section */}
+            {reveal && outliers.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl border border-indigo-100 bg-indigo-50/10 dark:border-indigo-950/40 dark:bg-indigo-950/10 p-5 space-y-3.5 shadow-sm"
+              >
+                <div className="flex items-center gap-2 text-indigo-650 dark:text-indigo-400">
+                  <span className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                  </span>
+                  <span className="font-sans font-bold text-sm tracking-tight">Votos Extremos a Discutir</span>
+                </div>
+                
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Para lograr consenso, se recomienda invitar a quienes tienen estimaciones extremas a compartir su perspectiva:
+                </p>
+
+                <div className="space-y-2 pt-1">
+                  {outliers.map((o, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs gap-3 ${
+                        o.type === 'bajo' 
+                          ? 'border-emerald-100 bg-emerald-50/25 dark:border-emerald-950/20 dark:bg-emerald-950/5 text-emerald-800 dark:text-emerald-400' 
+                          : 'border-rose-100 bg-rose-50/25 dark:border-rose-950/20 dark:bg-rose-950/5 text-rose-800 dark:text-rose-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="font-bold truncate text-slate-900 dark:text-slate-100">{o.participantName}</span>
+                        <span className="text-[10px] opacity-75">
+                          ({o.type === 'bajo' ? 'más baja' : 'más alta'})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="font-mono text-[10px] opacity-60">Diferencia: {o.diff.toFixed(1)}</span>
+                        <span className={`px-2 py-0.5 rounded-lg font-extrabold font-mono text-xs ${
+                          o.type === 'bajo'
+                            ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-350 border border-emerald-200/50 dark:border-emerald-900/20'
+                            : 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-350 border border-rose-200/50 dark:border-rose-900/20'
+                        }`}>
+                          {o.vote === '☕' ? '☕' : o.vote}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-[11px] text-center italic text-slate-400 dark:text-slate-500 pt-1">
+                  💡 Escuchar a ambos extremos ayuda a descubrir requerimientos ocultos o suposiciones distintas.
                 </div>
               </motion.div>
             )}

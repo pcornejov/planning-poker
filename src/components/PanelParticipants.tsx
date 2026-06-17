@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Users, CheckCircle2, Circle, AlertCircle, Coffee } from 'lucide-react';
+import { Users, CheckCircle2, Circle, AlertCircle, Coffee, Eye } from 'lucide-react';
 import { Participant, VoteValue } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { isFirebaseConfigured } from '../firebase';
@@ -14,13 +14,19 @@ interface PanelParticipantsProps {
   currentUserId: string;
   reveal: boolean;
   activeTaskId: string | null;
+  onToggleSpectator?: (isSpectator: boolean) => void;
 }
 
-export default function PanelParticipants({ participants, currentUserId, reveal, activeTaskId }: PanelParticipantsProps) {
+export default function PanelParticipants({ participants, currentUserId, reveal, activeTaskId, onToggleSpectator }: PanelParticipantsProps) {
   const pList = Object.values(participants || {}).sort((a, b) => b.joinedAt - a.joinedAt);
   const totalCount = pList.length;
   const hasActiveTask = activeTaskId !== null;
-  const votedCount = hasActiveTask ? pList.filter(p => p.vote !== null && p.vote !== undefined).length : 0;
+  const myRecord = pList.find(p => p.id === currentUserId);
+  
+  // Separate voters and spectators
+  const voters = pList.filter(p => !p.isSpectator);
+  const totalVoters = voters.length;
+  const votedCount = hasActiveTask ? voters.filter(p => p.vote !== null && p.vote !== undefined).length : 0;
 
   return (
     <div id="panel-participants-root" className="flex h-full flex-col bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
@@ -35,7 +41,7 @@ export default function PanelParticipants({ participants, currentUserId, reveal,
               Participantes
             </h3>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              {votedCount} de {totalCount} han votado
+              {votedCount} de {totalVoters} han votado
             </p>
           </div>
         </div>
@@ -43,6 +49,31 @@ export default function PanelParticipants({ participants, currentUserId, reveal,
           {totalCount}
         </span>
       </div>
+
+      {/* Banner superior dedicado */}
+      {onToggleSpectator && myRecord && (
+        <div className="mx-4 mt-4 px-3.5 py-3 rounded-xl border border-indigo-100/60 dark:border-indigo-950/40 bg-indigo-50/20 dark:bg-indigo-950/20 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="p-2 rounded-lg bg-indigo-100/65 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex-shrink-0 flex items-center justify-center">
+              {myRecord.isSpectator ? <Eye className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+            </span>
+            <div className="overflow-hidden">
+              <p className="font-bold text-slate-850 dark:text-slate-200 leading-snug flex items-center gap-1">
+                Tu rol: <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{myRecord.isSpectator ? "Espectador" : "Votante"}</span>
+              </p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                {myRecord.isSpectator ? "Miras sin votar" : "Tu voto es requerido"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onToggleSpectator(!myRecord.isSpectator)}
+            className="flex-shrink-0 px-2.5 py-1.5 font-bold uppercase text-[9px] tracking-wider rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 border border-slate-200 dark:border-slate-800 text-indigo-600 dark:text-indigo-400 transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+          >
+            {myRecord.isSpectator ? "Votar" : "Observar"}
+          </button>
+        </div>
+      )}
 
       {/* Participants List */}
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar max-h-[245px] lg:max-h-none">
@@ -95,14 +126,22 @@ export default function PanelParticipants({ participants, currentUserId, reveal,
                            )}
                          </div>
                          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
-                           {hasActiveTask ? (hasVoted ? 'Voto cargado' : 'Falta votar') : 'Sin tarea activa'}
+                           {p.isSpectator 
+                             ? 'En modo espectador' 
+                             : hasActiveTask 
+                               ? (hasVoted ? 'Voto cargado' : 'Falta votar') 
+                               : 'Sin tarea activa'}
                          </span>
                        </div>
                      </div>
 
                      {/* Voting State Visual */}
                      <div className="flex items-center gap-2">
-                       {reveal ? (
+                       {p.isSpectator ? (
+                         <span className="flex items-center text-slate-400 dark:text-slate-500 text-xs font-semibold px-2 py-1 select-none">
+                           👀 Miro
+                         </span>
+                       ) : reveal ? (
                          /* Vote value is revealed */
                          <motion.div
                            initial={{ scale: 0, rotateY: -180 }}

@@ -113,6 +113,17 @@ export default function App() {
     }
   };
 
+  const handleToggleSpectator = (isSpectator: boolean) => {
+    if (userId) {
+      dbService.setSpectator(userId, isSpectator);
+      if (isSpectator) {
+        addToast('Has entrado al modo espectador (no votarás).', 'info');
+      } else {
+        addToast('Has vuelto como votante activo.', 'info');
+      }
+    }
+  };
+
   const handleReveal = () => {
     dbService.revealVotes();
     addToast('¡Estimaciones reveladas!', 'success');
@@ -146,10 +157,13 @@ export default function App() {
 
   const currentVote = myParticipantRecord ? myParticipantRecord.vote : null;
 
-  const totalParticipants = Object.keys(roomState.participants || {}).length;
+  const participantsList = Object.values(roomState.participants || {});
+  const votersList = participantsList.filter((p: any) => !p.isSpectator);
+  const totalParticipants = participantsList.length;
+  const totalVoters = votersList.length;
   const hasActiveTask = roomState.system.activeTaskId !== null;
   const votedCount = hasActiveTask
-    ? Object.values(roomState.participants || {}).filter((p: any) => p.vote !== null && p.vote !== undefined).length
+    ? votersList.filter((p: any) => p.vote !== null && p.vote !== undefined).length
     : 0;
 
   return (
@@ -253,6 +267,7 @@ export default function App() {
               currentUserId={userId || ''}
               reveal={roomState.system.reveal}
               activeTaskId={roomState.system.activeTaskId}
+              onToggleSpectator={handleToggleSpectator}
             />
           </div>
 
@@ -262,8 +277,9 @@ export default function App() {
               activeTask={activeTask}
               currentVote={currentVote}
               reveal={roomState.system.reveal}
-              totalParticipants={totalParticipants}
+              totalParticipants={totalVoters}
               votedCount={votedCount}
+              isSpectator={myParticipantRecord?.isSpectator || false}
               onVote={handleVote}
               onReveal={handleReveal}
               onReset={handleReset}

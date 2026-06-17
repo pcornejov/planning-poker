@@ -11,6 +11,7 @@ export interface Participant {
   id: string;
   name: string;
   vote: VoteValue | null;
+  isSpectator?: boolean;
   joinedAt: number;
 }
 

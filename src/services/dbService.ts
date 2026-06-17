@@ -204,6 +204,7 @@ class DbService {
             id: userId,
             name: userName,
             vote: null,
+            isSpectator: false,
             joinedAt: Date.now(),
           });
         }
@@ -214,6 +215,7 @@ class DbService {
         id: userId,
         name: userName,
         vote: null,
+        isSpectator: false,
         joinedAt: Date.now(),
       }).catch(err => {
         console.error('Error setting immediate user joined state:', err);
@@ -247,6 +249,7 @@ class DbService {
         id: userId,
         name: userName,
         vote: null,
+        isSpectator: false,
         joinedAt: Date.now(),
       } as any;
       
@@ -301,6 +304,31 @@ class DbService {
       this.loadLocalState();
       if (this.localState.participants && this.localState.participants[userId]) {
         this.localState.participants[userId].vote = vote;
+      }
+      this.broadcastState();
+    }
+  }
+
+  public async setSpectator(userId: string, isSpectator: boolean) {
+    if (isFirebaseConfigured && db) {
+      const fns = await getFirebaseDBFunctions();
+      if (!fns) return;
+      const { ref: fRef, set, update } = fns;
+
+      const updateMap: Record<string, any> = {};
+      updateMap[`participants/${userId}/isSpectator`] = isSpectator;
+      if (isSpectator) {
+        // If becoming a spectator, reset their vote so they don't block
+        updateMap[`participants/${userId}/vote`] = null;
+      }
+      await update(fRef(db, '/'), updateMap);
+    } else {
+      this.loadLocalState();
+      if (this.localState.participants && this.localState.participants[userId]) {
+        this.localState.participants[userId].isSpectator = isSpectator;
+        if (isSpectator) {
+          this.localState.participants[userId].vote = null;
+        }
       }
       this.broadcastState();
     }
